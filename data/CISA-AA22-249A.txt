@@ -1,0 +1,5 @@
+#Source: https://www.cisa.gov/news-events/cybersecurity-advisories/aa22-249a
+5.255.99.59
+5.161.136.176
+198.252.98.184
+194.34.246.90
