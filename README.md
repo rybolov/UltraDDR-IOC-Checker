@@ -7,8 +7,8 @@ This tool reads the following from a text file, one item per line:
 2. Domain names (Queries for an A record, shows if we got the IP address of the "blocked" page.)
 3. HTTP/HTTPS URLs by removing everything except the FQDN/domain.  (Queries for an A record, shows if we got the IP address of the "blocked" page.)
 4. The domain half of email addresses (Anything to the right of "@".  Queries for an A record, shows if we got the IP address of the "blocked" page.)
-5. IPv4 addresses (Makes a PTR query, should be shown as "Other" in results)
-6. IPv6 addresses (Makes a PTR query, should be shown as "Other" in results)
+5. IPv4 addresses (Makes a PTR query, should be shown as "PTR" in results)
+6. IPv6 addresses (Makes a PTR query, should be shown as "PTR" in results)
 
 Most CTI sources (example: CISA Advisories) "defang" CTI IOC by replacing "." with "[.]" so we remove that when we process the list.  Others transform "HTTP" and "HTTPS" into "HXXP" and "HXXPS" and so we also translate that.
 
@@ -21,7 +21,7 @@ We give the status of each IOC:
 2. Not Blocked: Not blocked by DDR
 3. NXDOMAIN: The domain no longer exists or the FQDN inside of it does not exist.
 4. PTR: For IP addresses, we query for PTR but UltraDDR doesn't block like it does for the other IOCs.
-5. Other: IOC is not a FQDN or is NXDOMAIN
+5. Error: Anything not in the above list
 
 
 ### To Use:
