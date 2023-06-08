@@ -9,6 +9,7 @@ import os
 import re
 from joblib import Parallel, delayed
 import csv
+import time
 
 
 if not os.path.exists('config.py'):
@@ -143,13 +144,22 @@ class IOCList:
             # print(ioc.status)
 
     def get_ddr_serial(self):
+        # Run twice with a 3-second pause.
+        for ioc in self.IOCnames.values():
+            ioc.get_ddr()
+        time.sleep(3)
+        # Second Run!
         for ioc in self.IOCnames.values():
             ioc.get_ddr()
 
     def get_ddr_multiprocessing(self):
+        # Run twice with a 3-second pause.
         Parallel(n_jobs=5, require='sharedmem')(delayed(get_ddr_multiprocessing)(iocname)
                                                 for iocname in self.IOCnames.values())
-
+        time.sleep(3)
+        # Second Run!
+        Parallel(n_jobs=5, require='sharedmem')(delayed(get_ddr_multiprocessing)(iocname)
+                                                for iocname in self.IOCnames.values())
 
 class IOCName:
     """An individual FQDN, domain, or IP address"""

@@ -59,4 +59,6 @@ options:
                         Input file with one IOC per line.
   --strict              Do not run validation if there are bad lines.This
                         ignores comments.
+  --serial              Process in serial instead of parallel. This helps in
+                        troubleshooting but is slower.
 ```
