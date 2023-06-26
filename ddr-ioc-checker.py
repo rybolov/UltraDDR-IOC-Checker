@@ -9,12 +9,10 @@ import os
 import re
 from joblib import Parallel, delayed
 import csv
-import time
 
 
 if not os.path.exists('config.py'):
-    exit('Error, you haven\'t set up a configuration.\n\
-    Please copy config.py.example to config.py and change the ClientID.')
+    exit('Error, you haven\'t set up a configuration.\nPlease copy config.py.example to config.py and change the ClientID.')
 else:
     import config
     config = config.Config()
@@ -23,6 +21,7 @@ else:
 
 generationdate = datetime.datetime.now().strftime("%Y.%m.%d %I:%M:%S %p")
 today = datetime.datetime.now().strftime("%Y-%m-%d")
+
 
 
 print('''
@@ -36,18 +35,13 @@ print('''
   \\___|_||_|___\\___|_|\\_\\___|_|_\\
 ''')
 
-# Todo: Make PTRs work
-
 # ----------Begin Input Validation----------
-
-
 def is_valid_file(parser, filename):
     if not os.path.exists(filename):
         parser.error("The file %s does not exist!" % filename)
         quit(666)
     else:
         return filename
-
 
 parser = argparse.ArgumentParser(description='Send queries for CTI IOC to UltraDDR.')
 parser.add_argument('-i', '--input', dest='filename', required=False, metavar='FILE',
@@ -56,6 +50,10 @@ parser.add_argument('--strict', action='store_true', help="Do not run validation
 This ignores comments.", default=False)
 parser.add_argument('--serial', action='store_true', help="Process in serial instead of parallel. \
 This helps in troubleshooting but is slower.", default=False)
+parser.add_argument('--addpause', action='store_true', help="Spread out the queries by waiting 3 seconds between.",
+                    default=False)
+parser.add_argument('-t', '--threads', '--processes', dest='threads', type=int, help='Set the number of concurrent DoH query threads.',
+                    default=5)
 args = parser.parse_args()
 # ----------End Input Validation----------
 
@@ -69,12 +67,12 @@ class IOCList:
         self.allvalid = True
         self.failedlines = []
         self.csv = \
-            [
-                ['Date Generated:  ' + generationdate],
-                ['Questions, comments, or complaints: contact threat-intel@vercara.com'],
-                [],
-                ['Query Name', 'UltraDDR Status']
-            ]
+        [
+            ['Date Generated:  ' + generationdate],
+            ['Questions, comments, or complaints: contact threat-intel@vercara.com'],
+            [],
+            ['Query Name', 'UltraDDR Status']
+        ]
 
     def __repr__(self):
         """Return string representation of everything."""
@@ -83,8 +81,7 @@ class IOCList:
     def get_iocs_from_file(self):
         linenumber = 0
         if not self.filename:
-            exit('Error, no filename was passed.\nPlease use the -i flag to specify a file.\
-            \nUse --help for more information.')
+            exit('Error, no filename was passed.\nPlease use the -i flag to specify a file.\nUse --help for more information.')
         else:
             print('Openening file:', self.filename)
             with open(self.filename) as f_open:
@@ -96,21 +93,15 @@ class IOCList:
                 line = line.strip()  # Remove whitespace
                 line = line.rstrip('.')  # For any lists that use DNS-style FQDNs that end with a dot.
                 line = line.lower()  # Use all lower-case
-
-                # Most CTI list domains as foo[.]com to keep you from clicking on them.
-                line = re.sub('\[\.\]', '.', line)
-
-                # Remove "http://", "https://" "hxxp://" and "hxxps://"
-                line = re.sub('^h[tx]{2}ps*://', '', line)
-
-                # Remove "/path/and/anything/else/here" and rely on regex being "greedy"
-                line = re.sub('/.*$', '', line)
+                line = re.sub('\[\.\]', '.', line)  # Most CTI list domains as foo[.]com to keep you from clicking on them.
+                line=re.sub('^h[tx]{2}ps*://','', line)  # Remove "http://", "https://" "hxxp://" and "hxxps://"
+                line = re.sub('/.*$', '', line)  # Remove "/path/and/anything/else/here" and rely on regex being "greedy"
                 print(line)
                 if re.search('^#', line):
                     print('Line is a comment: ', line)
                 elif re.search('^$', line):
                     print('Line is empty: ', line)
-                elif re.search('\s', line):  # Disqualify because of spaces
+                elif re.search('\s', line): # Disqualify because of spaces
                     print('Line contains a space in the middle of it,', line)
                     self.allvalid = False
                     self.failedlines.append(line)
@@ -123,7 +114,7 @@ class IOCList:
                 elif re.search('^[a-z0-9\-\.]*$', line):  # Domain/FQDN allowable characters is allowed
                     print('Line is valid FQDN/domain: ', line)
                     self.IOCnames[line] = IOCName(line)
-                elif re.search('^.+@[a-z0-9\-\.]*$', line):  # Email address is allowed
+                elif re.search('^.+@[a-z0-9\-\.]*$', line): # Email address is allowed
                     print('Line is valid email: ', line)
                     self.IOCnames[line] = IOCName(line)
                 else:
@@ -144,21 +135,23 @@ class IOCList:
             # print(ioc.status)
 
     def get_ddr_serial(self):
-        # Run twice with a 3-second pause.
         for ioc in self.IOCnames.values():
             ioc.get_ddr()
-        time.sleep(3)
+            if args.addpause:
+                time.sleep(3)
+        time.sleep(10)
         # Second Run!
         for ioc in self.IOCnames.values():
             ioc.get_ddr()
+            if args.addpause:
+                time.sleep(3)
 
     def get_ddr_multiprocessing(self):
-        # Run twice with a 3-second pause.
-        Parallel(n_jobs=5, require='sharedmem')(delayed(get_ddr_multiprocessing)(iocname)
+        Parallel(n_jobs=args.threads, require='sharedmem')(delayed(get_ddr_multiprocessing)(iocname)
                                                 for iocname in self.IOCnames.values())
-        time.sleep(3)
+        time.sleep(10)
         # Second Run!
-        Parallel(n_jobs=5, require='sharedmem')(delayed(get_ddr_multiprocessing)(iocname)
+        Parallel(n_jobs=args.threads, require='sharedmem')(delayed(get_ddr_multiprocessing)(iocname)
                                                 for iocname in self.IOCnames.values())
 
 class IOCName:
@@ -180,18 +173,14 @@ class IOCName:
                 http = urllib3.PoolManager()
                 if re.search('@', self.iocname):
                     queryurl = config.ProviderURL + re.sub('^.*@', '', self.iocname) + '&type-'
-                    self.type = 'Email'
                 else:
                     queryurl = config.ProviderURL + self.iocname + '&type='
                 if re.search('^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$', self.iocname):  # IPv4 Address
                     queryurl += 'PTR'
-                    self.type = 'IPV4'
                 elif re.search('^([0-9a-fA-F]{0,8}:){7}[0-9a-fA-F]{0,8}$', self.iocname):  # IPv6 Address
                     queryurl += 'PTR'
-                    self.type = 'IPV6'
                 else:
                     queryurl += 'A'
-                    self.type = 'FQDN'
                 print(queryurl)
                 req = http.request('GET', queryurl,
                                    headers={
@@ -206,8 +195,8 @@ class IOCName:
                 time.sleep(looper * 2)
             except urllib3.exceptions.HTTPError as e:
                 if re.search('certificate verify failed: unable to get local issuer certificate', e.reason):
-                    print('Couldn\'t find the CA Certs, import ultraddr-ca-cert.pem and run \
-                          \'<phythonhome/Install Certificates.command\'')
+                    print('Couldn\'t find the CA Certs, import ultraddr-ca-cert.pem and run '\
+                          '\'<phythonhome/Install Certificates.command\'')
                 print(e.reason)
                 print("HTTP error. Resending....")
                 time.sleep(looper * 2)
@@ -225,38 +214,33 @@ class IOCName:
         # print(json.dumps(ddr_results, indent=4))
 
         self.rawresults = json.dumps(ddr_results)
-        if ddr_results['Status'] == 0:  # 0 means we got an answer.
-            if 'Answer' in ddr_results.keys():
-                print(json.dumps(ddr_results['Answer'][0]['data'], indent=4))
-                if ddr_results['Answer'][0]['data'] == '20.13.128.62':
-                    self.status = 'Blocked'
-                    print('Blocked')
-                else:
-                    self.status = 'Not Blocked'
-                    print('Not Blocked')
+        if 'Answer' in ddr_results.keys():
+            print(json.dumps(ddr_results['Answer'][0]['data'], indent=4))
+            if ddr_results['Answer'][0]['data'] == '20.13.128.62':
+                self.status = 'Blocked'
+                print('Blocked')
+            else:
+                self.status = 'Not Blocked'
+                print('Not Blocked')
             # print(self.status)
-        elif self.type in ['IPV4', 'IPV6']:
-            self.status = 'PTR'
-        elif ddr_results['Status'] == 3:  # 3 is NXDOMAIN
-            self.status = 'NXDOMAIN'
         else:
-            self.status = "Error"
+            self.status = "NXDOMAIN"
         # print(self)
-
 
 def get_ddr_multiprocessing(ioc):
     ioc.get_ddr()
 
 
+
+
+
 def obj_dict(obj):  # Needed for the json.dumps() call in the __repr__ of the classes.
     return obj.__dict__
-
 
 def main():
     fullfile = IOCList()
     fullfile.filename = args.filename
     fullfile.get_iocs_from_file()
-    # fullfile.get_ddr_serial()
     if args.serial:
         fullfile.get_ddr_serial()
     else:
@@ -269,9 +253,10 @@ def main():
         writer = csv.writer(f)
         writer.writerows(fullfile.csv)
 
-
 def readfile(filename):
     pass
+
+
 
 
 if __name__ == "__main__":
