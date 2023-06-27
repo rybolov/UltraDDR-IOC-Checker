@@ -1,4 +1,4 @@
-# ddr-ioc-checker
+# ultraddr-ioc-checker
 
 A utility that makes queries against Vercara UltraDDR using a customer account ID and gives some analysis.  It also seeds the domains/FQDNs into the Watch Engine so that they can be later qualified and blocked if they are new to UltraDDR.
 
@@ -17,8 +17,8 @@ An example file with errors is in testdata/testfile.txt.
 
 
 We give the status of each IOC:
-1. Blocked: Blocked by DDR
-2. Not Blocked: Not blocked by DDR
+1. Blocked: Blocked by UltraDDR
+2. Not Blocked: Not blocked by UltraDDR
 3. NXDOMAIN: The domain no longer exists or the FQDN inside of it does not exist.
 4. PTR: For IP addresses, we query for PTR but UltraDDR doesn't block like it does for the other IOCs.
 5. Error: Anything not in the above list
@@ -26,30 +26,34 @@ We give the status of each IOC:
 
 ### To Use:
 1. `git clone`
-2. `cd ddr-ioc-checker`
+2. `cd Ultraddr-IOC-Checker`
 3. `python3 -m venv ./venv`
 4. `source ./venv/bin/activate`
 5. `pip3 install -r requirements.txt`
 6. `cp config.py.example config.py`
 7. `vi config.py`
-6. `python3 ./ddr-ioc-checker.py --strict -i testfile.txt`
+6. `python3 ./ultraddr-ioc-checker.py --strict -i testfile.txt`
 7. Optional: `./do.bulk.sh` to update findings for ./data/*.txt.
 
 I have pre-seeded ./data/ with CISA and other advisories and tested them against an UltraDDR account.
 
 ```commandline
-python3 ./ddr-ioc-checker.py --help 
+python3 ./ultraddr-ioc-checker.py --help 
+ 
 
-  ___  ___  ___   ___ ___   ___  
- |   \|   \| _ \ |_ _/ _ \ / __| 
- | |) | |) |   /  | | (_) | (__  
- |___/|___/|_|_\ |___\___/ \___| 
-   ___ _  _ ___ ___ _  _____ ___ 
-  / __| || | __/ __| |/ / __| _ \
- | (__| __ | _| (__| ' <| _||   /
-  \___|_||_|___\___|_|\_\___|_|_\
+  _   _ _ _            ___  ___  ___  
+ | | | | | |_ _ _ __ _|   \|   \| _ \ 
+ | |_| | |  _| '_/ _` | |) | |) |   / 
+  \___/|_|\__|_| \__,_|___/|___/|_|_\ 
+ |_ _/ _ \ / __|                      
+  | | (_) | (__                       
+ |___\___/ \___|   _                  
+  / __| |_  ___ __| |_____ _ _        
+ | (__| ' \/ -_) _| / / -_) '_|       
+  \___|_||_\___\__|_\_\___|_|         
 
-usage: ddr-ioc-checker.py [-h] [-i FILE] [--strict]
+usage: ultraddr-ioc-checker.py [-h] [-i FILE] [--strict] [--serial]
+                               [--addpause] [-t THREADS] [--random RANDOM]
 
 Send queries for CTI IOC to UltraDDR.
 
@@ -61,4 +65,10 @@ options:
                         ignores comments.
   --serial              Process in serial instead of parallel. This helps in
                         troubleshooting but is slower.
+  --addpause            Spread out the queries by waiting 3 seconds between.
+  -t THREADS, --threads THREADS, --processes THREADS
+                        Set the number of concurrent DoH query threads.
+  --random RANDOM, -r RANDOM
+                        Pick X random samples from the IoC list and query for
+                        them.
 ```

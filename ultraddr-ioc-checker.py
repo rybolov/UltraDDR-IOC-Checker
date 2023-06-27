@@ -9,6 +9,7 @@ import os
 import re
 from joblib import Parallel, delayed
 import csv
+import random
 
 
 if not os.path.exists('config.py'):
@@ -25,14 +26,16 @@ today = datetime.datetime.now().strftime("%Y-%m-%d")
 
 
 print('''
-  ___  ___  ___   ___ ___   ___  
- |   \\|   \\| _ \\ |_ _/ _ \\ / __| 
- | |) | |) |   /  | | (_) | (__  
- |___/|___/|_|_\\ |___\\___/ \\___| 
-   ___ _  _ ___ ___ _  _____ ___ 
-  / __| || | __/ __| |/ / __| _ \\
- | (__| __ | _| (__| ' <| _||   /
-  \\___|_||_|___\\___|_|\\_\\___|_|_\\
+  _   _ _ _            ___  ___  ___  
+ | | | | | |_ _ _ __ _|   \\|   \\| _ \\ 
+ | |_| | |  _| '_/ _` | |) | |) |   / 
+  \\___/|_|\\__|_| \\__,_|___/|___/|_|_\\ 
+ |_ _/ _ \\ / __|                      
+  | | (_) | (__                       
+ |___\\___/ \\___|   _                  
+  / __| |_  ___ __| |_____ _ _        
+ | (__| ' \\/ -_) _| / / -_) '_|       
+  \\___|_||_\\___\\__|_\\_\\___|_|         
 ''')
 
 # ----------Begin Input Validation----------
@@ -54,6 +57,8 @@ parser.add_argument('--addpause', action='store_true', help="Spread out the quer
                     default=False)
 parser.add_argument('-t', '--threads', '--processes', dest='threads', type=int, help='Set the number of concurrent DoH query threads.',
                     default=5)
+parser.add_argument('--random', '-r', dest='random', type=int, help='Pick X random samples from the IoC list and query for them.',
+                    default=0)
 args = parser.parse_args()
 # ----------End Input Validation----------
 
@@ -66,6 +71,7 @@ class IOCList:
         self.filename = ''
         self.allvalid = True
         self.failedlines = []
+        self.random = 0
         self.csv = \
         [
             ['Date Generated:  ' + generationdate],
@@ -154,6 +160,17 @@ class IOCList:
         Parallel(n_jobs=args.threads, require='sharedmem')(delayed(get_ddr_multiprocessing)(iocname)
                                                 for iocname in self.IOCnames.values())
 
+    def get_randoms(self):
+        if self.random > 0:
+            print('Using {} random entries'.format((self.random)))
+            newIOCnames = {}
+            IOCkeys = list(self.IOCnames.keys())
+            # print(IOCkeys)
+            randomIOCnames = random.choices(IOCkeys, k=self.random)
+            for IOC in randomIOCnames:
+                newIOCnames[IOC] = self.IOCnames[IOC]
+            self.IOCnames = newIOCnames
+
 class IOCName:
     """An individual FQDN, domain, or IP address"""
 
@@ -241,6 +258,8 @@ def main():
     fullfile = IOCList()
     fullfile.filename = args.filename
     fullfile.get_iocs_from_file()
+    fullfile.random = args.random
+    fullfile.get_randoms()
     if args.serial:
         fullfile.get_ddr_serial()
     else:
