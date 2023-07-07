@@ -179,6 +179,7 @@ class IOCName:
         self.status = ''
         self.rawresults = ''
         self.type = ''
+        self.deviceid = config.DeviceID
 
     def __repr__(self):
         """Return string representation of Finding."""
@@ -202,7 +203,8 @@ class IOCName:
                 req = http.request('GET', queryurl,
                                    headers={
                                             'Accept': 'application/dns-json',
-                                            'X-UltraDDR-Client-id': config.ClientID
+                                            'X-UltraDDR-Client-id': config.ClientID,
+                                            'X-UltraDDR-Device-Name': self.deviceid
                                             }
                                    )
                 ddr_results = json.loads(req.data.decode('utf-8'))
@@ -246,6 +248,8 @@ class IOCName:
 
 def get_ddr_multiprocessing(ioc):
     ioc.get_ddr()
+    if args.addpause:
+        time.sleep(3)
 
 
 
