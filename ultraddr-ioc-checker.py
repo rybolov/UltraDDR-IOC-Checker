@@ -51,14 +51,16 @@ parser.add_argument('-i', '--input', dest='filename', required=False, metavar='F
                     help='Input file with one IOC per line.', type=lambda x: is_valid_file(parser, x))
 parser.add_argument('--strict', action='store_true', help="Do not run validation if there are bad lines.\
 This ignores comments.", default=False)
-parser.add_argument('--serial', action='store_true', help="Process in serial instead of parallel. \
-This helps in troubleshooting but is slower.", default=False)
+parser.add_argument('--serial', action='store_true', help='Process in serial instead of parallel. \
+This helps in troubleshooting but is slower.', default=False)
 parser.add_argument('--addpause', action='store_true', help="Spread out the queries by waiting 3 seconds between.",
                     default=False)
 parser.add_argument('-t', '--threads', '--processes', dest='threads', type=int, help='Set the number of concurrent DoH query threads.',
                     default=5)
 parser.add_argument('--random', '-r', dest='random', type=int, help='Pick X random samples from the IoC list and query for them.',
                     default=0)
+parser.add_argument('--device', '-d', type=str, help='Send this name as the DeviceID.  Default is \
+                    \'DDR-IOC-Checker\' and can be configured in config.py')
 args = parser.parse_args()
 # ----------End Input Validation----------
 
@@ -180,6 +182,8 @@ class IOCName:
         self.rawresults = ''
         self.type = ''
         self.deviceid = config.DeviceID
+        if args.device:
+            self.deviceid = args.device
 
     def __repr__(self):
         """Return string representation of Finding."""

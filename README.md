@@ -71,4 +71,8 @@ options:
   --random RANDOM, -r RANDOM
                         Pick X random samples from the IoC list and query for
                         them.
+  --device DEVICE, -d DEVICE
+                        Send this name as the DeviceID. Default is 'DDR-IOC-
+                        Checker' and can be configured in config.py
+
 ```
