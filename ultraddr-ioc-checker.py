@@ -24,7 +24,6 @@ generationdate = datetime.datetime.now().strftime("%Y.%m.%d %I:%M:%S %p")
 today = datetime.datetime.now().strftime("%Y-%m-%d")
 
 
-
 print('''
   _   _ _ _            ___  ___  ___  
  | | | | | |_ _ _ __ _|   \\|   \\| _ \\ 
@@ -60,7 +59,8 @@ parser.add_argument('-t', '--threads', '--processes', dest='threads', type=int, 
 parser.add_argument('--random', '-r', dest='random', type=int, help='Pick X random samples from the IoC list and query for them.',
                     default=0)
 parser.add_argument('--device', '-d', type=str, help='Send this name as the DeviceID.  Default is \
-                    \'DDR-IOC-Checker\' and can be configured in config.py')
+                    \'DDR-IOC-Checker\' and can be configured in config.py. Use \'random\' to use a random set of \
+                    device names')
 args = parser.parse_args()
 # ----------End Input Validation----------
 
@@ -204,11 +204,19 @@ class IOCName:
                 else:
                     queryurl += 'A'
                 print(queryurl)
+                if self.deviceid == 'random':
+                    # print('Choosing random device name')
+                    deviceid = random.choice(devicenames)
+                    # print(deviceid)
+                else:
+                    deviceid = self.deviceid
+                    print('device id', deviceid)
+
                 req = http.request('GET', queryurl,
                                    headers={
                                             'Accept': 'application/dns-json',
                                             'X-UltraDDR-Client-id': config.ClientID,
-                                            'X-UltraDDR-Device-Name': self.deviceid
+                                            'X-UltraDDR-Device-Name': deviceid # deviceid
                                             }
                                    )
                 ddr_results = json.loads(req.data.decode('utf-8'))
@@ -256,11 +264,30 @@ def get_ddr_multiprocessing(ioc):
         time.sleep(3)
 
 
+def readfile(filename):
+    pass
 
+
+def get_machine_names(number):
+    names = []
+    characters = '1234567890abcdefghijklmnopqrstuvwxyz'
+    types = ['ws', 'lnx', 'lap', 'w2k', 'mac']
+    identifiers = []
+    domain = random.choice(['.zone', '.domain', '.company'])
+    tld = random.choice(['.local', '.internal', '.corp', '.private'])
+    for i in range(number):
+        name = random.choice(types) + '-'
+        for y in range(8):
+            name += str(random.choice(characters))
+        name += domain + tld
+        names.append(name)
+    # print(names)
+    return names
 
 
 def obj_dict(obj):  # Needed for the json.dumps() call in the __repr__ of the classes.
     return obj.__dict__
+
 
 def main():
     fullfile = IOCList()
@@ -280,11 +307,10 @@ def main():
         writer = csv.writer(f)
         writer.writerows(fullfile.csv)
 
-def readfile(filename):
-    pass
 
-
-
+if args.device == 'random':
+    print("Using random device names.")
+    devicenames = get_machine_names(100)
 
 if __name__ == "__main__":
     main()
