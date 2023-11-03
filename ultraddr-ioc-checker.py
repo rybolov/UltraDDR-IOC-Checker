@@ -271,14 +271,21 @@ def readfile(filename):
 def get_machine_names(number):
     names = []
     characters = '1234567890abcdefghijklmnopqrstuvwxyz'
-    types = ['ws', 'lnx', 'lap', 'w2k', 'mac']
+    letters = 'abcdefghijklmnopqrstuvwxyz'
+    numbers = '1234567890'
+    types = ['win11', 'win11', 'win11', 'win11', 'win11', 'win11',
+             'win11', 'win11', 'win10', 'linux',
+             'laptop', 'laptop', 'w2k19', 'exch', 'w2k22', 'w2k22', 'w2k19', 'dns',
+             'apps', 'mac']
     identifiers = []
-    domain = random.choice(['.zone', '.domain', '.company'])
+    domain = random.choice(['.zone', '.domain', '.company', '.ad'])
     tld = random.choice(['.local', '.internal', '.corp', '.private'])
     for i in range(number):
         name = random.choice(types) + '-'
-        for y in range(8):
-            name += str(random.choice(characters))
+        for y in range(2):
+            name += str(random.choice(letters))
+        for y in range(6):
+            name += str(random.choice(numbers))
         name += domain + tld
         names.append(name)
     # print(names)
