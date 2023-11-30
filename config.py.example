@@ -7,6 +7,7 @@ class Config:
     def __init__(self):
         self.ProviderURL = "https://rcsv.ddr.ultradns.com/dns-query?name="
         self.ClientID = 'CHANGEME'
+        self.BlockIP = 'CHANGEME'
         self.DeviceID = 'UltraDDR-IOC-Checker'
 
 

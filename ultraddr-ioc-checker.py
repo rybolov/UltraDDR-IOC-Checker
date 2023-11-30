@@ -10,7 +10,7 @@ import re
 from joblib import Parallel, delayed
 import csv
 import random
-
+import ipaddress
 
 if not os.path.exists('config.py'):
     exit('Error, you haven\'t set up a configuration.\nPlease copy config.py.example to config.py and change the ClientID.')
@@ -19,6 +19,13 @@ else:
     config = config.Config()
     if config.ClientID == 'CHANGEME':
         exit('Error, you haven\'t set up a ClientID in config.py.\nPlease fix and re-run.')
+    
+    config.BlockIP = config.BlockIP.strip()
+    
+    try:
+        ipaddress.ip_address(config.BlockIP)
+    except ValueError:
+        exit('Error, you have specified an invalid IP address (%s) in your config.py.' % config.BlockIP)
 
 generationdate = datetime.datetime.now().strftime("%Y.%m.%d %I:%M:%S %p")
 today = datetime.datetime.now().strftime("%Y-%m-%d")
@@ -61,7 +68,7 @@ parser.add_argument('--random', '-r', dest='random', type=int, help='Pick X rand
 parser.add_argument('--device', '-d', type=str, help='Send this name as the DeviceID.  Default is \
                     \'DDR-IOC-Checker\' and can be configured in config.py. Use \'random\' to use a random set of \
                     device names')
-args = parser.parse_args()
+args = parser.parse_args() 
 # ----------End Input Validation----------
 
 
@@ -247,7 +254,7 @@ class IOCName:
         self.rawresults = json.dumps(ddr_results)
         if 'Answer' in ddr_results.keys():
             print(json.dumps(ddr_results['Answer'][0]['data'], indent=4))
-            if ddr_results['Answer'][0]['data'] == '20.13.128.62':
+            if ddr_results['Answer'][0]['data'] == config.BlockIP:
                 self.status = 'Blocked'
                 print('Blocked')
             else:
