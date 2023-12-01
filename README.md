@@ -17,11 +17,11 @@ An example file with errors is in testdata/testfile.txt.
 
 
 We give the status of each IOC:
-1. Blocked: Blocked by UltraDDR
-2. Not Blocked: Not blocked by UltraDDR
+1. Blocked: Blocked by UltraDDR.
+2. Not Blocked: Not blocked by UltraDDR.
 3. NXDOMAIN: The domain no longer exists or the FQDN inside of it does not exist.
 4. PTR: For IP addresses, we query for PTR but UltraDDR doesn't block like it does for the other IOCs.
-5. Error: Anything not in the above list
+5. Error: Anything not in the above list.
 
 
 ### To Use:
@@ -76,3 +76,12 @@ options:
                         Checker' and can be configured in config.py
 
 ```
+
+### To Configure:
+
+The config.py file supports the following configurations:
+
+1. `ProviderURL` (required) is the URL the IOC Checker uses to make DoH queries to UltraDDR. 
+2. `ClientID` (required) associates the DNS queries made by the tool with your UltraDDR account.
+3. `BlockIP` (required) is the sinkhole IP address returned by UltraDDR and is used by the tool to determine if an FQDN was blocked.
+4. `DeviceID` (optional) helps you identify the queries made by the IOC Checker tool when reviewing logs in UltraDDR.
