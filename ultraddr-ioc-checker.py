@@ -7,6 +7,7 @@ import json
 import argparse
 import os
 import re
+import joblib
 from joblib import Parallel, delayed
 import csv
 import random
@@ -68,9 +69,22 @@ parser.add_argument('--random', '-r', dest='random', type=int, help='Pick X rand
 parser.add_argument('--device', '-d', type=str, help='Send this name as the DeviceID.  Default is \
                     \'DDR-IOC-Checker\' and can be configured in config.py. Use \'random\' to use a random set of \
                     device names')
+parser.add_argument('--once', action='store_true', help='Only perform one run of the test (good for testing categories, lists, and policy rules.', default=False)
+parser.add_argument('--verbose', action='store_true', help='More detailed output during execution.', default=False)
 args = parser.parse_args() 
+
+available_cpu_cores = joblib.cpu_count()
+
+if args.threads > available_cpu_cores:
+
+    print('Machine only has', available_cpu_cores, 'cores. Reducing number of threads to mach available cores.')
+    args.threads = joblib.cpu_count()
+
 # ----------End Input Validation----------
 
+RED         = '\033[31m'
+GREEN       = '\033[32m'
+COLOR_STOP  = '\033[0m'
 
 class IOCList:
     """The whole list!!!"""
@@ -108,28 +122,28 @@ class IOCList:
                 line = line.strip()  # Remove whitespace
                 line = line.rstrip('.')  # For any lists that use DNS-style FQDNs that end with a dot.
                 line = line.lower()  # Use all lower-case
-                line = re.sub('\[\.\]', '.', line)  # Most CTI list domains as foo[.]com to keep you from clicking on them.
-                line=re.sub('^h[tx]{2}ps*://','', line)  # Remove "http://", "https://" "hxxp://" and "hxxps://"
-                line = re.sub('/.*$', '', line)  # Remove "/path/and/anything/else/here" and rely on regex being "greedy"
+                line = re.sub(r'\[\.\]', '.', line)  # Most CTI list domains as foo[.]com to keep you from clicking on them.
+                line = re.sub(r'^h[tx]{2}ps*://','', line)  # Remove "http://", "https://" "hxxp://" and "hxxps://"
+                line = re.sub(r'/.*$', '', line)  # Remove "/path/and/anything/else/here" and rely on regex being "greedy"
                 print(line)
-                if re.search('^#', line):
+                if re.search(r'^#', line):
                     print('Line is a comment: ', line)
-                elif re.search('^$', line):
+                elif re.search(r'^$', line):
                     print('Line is empty: ', line)
-                elif re.search('\s', line): # Disqualify because of spaces
+                elif re.search(r'\s', line): # Disqualify because of spaces
                     print('Line contains a space in the middle of it,', line)
                     self.allvalid = False
                     self.failedlines.append(line)
-                elif re.search('^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$', line):  # IPv4 address is allowed
+                elif re.search(r'^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$', line):  # IPv4 address is allowed
                     print('Line is valid IPv4 address: ', line)
                     self.IOCnames[line] = IOCName(line)
-                elif re.search('^([0-9a-fA-F]{0,8}:){7}[0-9a-fA-F]{0,8}$', line):  # IPv6 address is allowed
+                elif re.search(r'^([0-9a-fA-F]{0,8}:){7}[0-9a-fA-F]{0,8}$', line):  # IPv6 address is allowed
                     print('Line is valid IPv6: ', line)
                     self.IOCnames[line] = IOCName(line)
-                elif re.search('^[a-z0-9\-\.]*$', line):  # Domain/FQDN allowable characters is allowed
+                elif re.search(r'^[a-z0-9\-\.]*$', line):  # Domain/FQDN allowable characters is allowed
                     print('Line is valid FQDN/domain: ', line)
                     self.IOCnames[line] = IOCName(line)
-                elif re.search('^.+@[a-z0-9\-\.]*$', line): # Email address is allowed
+                elif re.search(r'^.+@[a-z0-9\-\.]*$', line): # Email address is allowed
                     print('Line is valid email: ', line)
                     self.IOCnames[line] = IOCName(line)
                 else:
@@ -154,19 +168,24 @@ class IOCList:
             ioc.get_ddr()
             if args.addpause:
                 time.sleep(3)
-        time.sleep(10)
-        # Second Run!
-        for ioc in self.IOCnames.values():
-            ioc.get_ddr()
-            if args.addpause:
-                time.sleep(3)
+
+        if not args.once:
+            time.sleep(10)
+
+            # Second Run!
+            for ioc in self.IOCnames.values():
+                ioc.get_ddr()
+                if args.addpause:
+                    time.sleep(3)
 
     def get_ddr_multiprocessing(self):
         Parallel(n_jobs=args.threads, require='sharedmem')(delayed(get_ddr_multiprocessing)(iocname)
                                                 for iocname in self.IOCnames.values())
-        time.sleep(10)
-        # Second Run!
-        Parallel(n_jobs=args.threads, require='sharedmem')(delayed(get_ddr_multiprocessing)(iocname)
+        if not args.once:
+            time.sleep(10)
+
+            # Second Run!
+            Parallel(n_jobs=args.threads, require='sharedmem')(delayed(get_ddr_multiprocessing)(iocname)
                                                 for iocname in self.IOCnames.values())
 
     def get_randoms(self):
@@ -177,6 +196,7 @@ class IOCList:
             # print(IOCkeys)
             randomIOCnames = random.choices(IOCkeys, k=self.random)
             for IOC in randomIOCnames:
+                # NOTE: List can be shorter than args.random if the same IOC is picked multiple times
                 newIOCnames[IOC] = self.IOCnames[IOC]
             self.IOCnames = newIOCnames
 
@@ -204,20 +224,25 @@ class IOCName:
                     queryurl = config.ProviderURL + re.sub('^.*@', '', self.iocname) + '&type-'
                 else:
                     queryurl = config.ProviderURL + self.iocname + '&type='
-                if re.search('^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$', self.iocname):  # IPv4 Address
+                if re.search(r'^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$', self.iocname):  # IPv4 Address
                     queryurl += 'PTR'
-                elif re.search('^([0-9a-fA-F]{0,8}:){7}[0-9a-fA-F]{0,8}$', self.iocname):  # IPv6 Address
+                elif re.search(r'^([0-9a-fA-F]{0,8}:){7}[0-9a-fA-F]{0,8}$', self.iocname):  # IPv6 Address
                     queryurl += 'PTR'
                 else:
                     queryurl += 'A'
-                print(queryurl)
+
+                if args.verbose:
+                    print(queryurl)
+
                 if self.deviceid == 'random':
                     # print('Choosing random device name')
                     deviceid = random.choice(devicenames)
                     # print(deviceid)
                 else:
                     deviceid = self.deviceid
-                    print('device id', deviceid)
+
+                    if args.verbose:
+                        print('device id', deviceid)
 
                 req = http.request('GET', queryurl,
                                    headers={
@@ -249,17 +274,19 @@ class IOCName:
                 time.sleep(looper * 2)
         else:
             print("\n======Connection timed out.  Aborting....======\n")
-        # print(json.dumps(ddr_results, indent=4))
+        #print(json.dumps(ddr_results, indent=4))
 
         self.rawresults = json.dumps(ddr_results)
         if 'Answer' in ddr_results.keys():
-            print(json.dumps(ddr_results['Answer'][0]['data'], indent=4))
+            if args.verbose:
+                print(json.dumps(ddr_results['Answer'][0]['data'], indent=4))
+
             if ddr_results['Answer'][0]['data'] == config.BlockIP:
                 self.status = 'Blocked'
-                print('Blocked')
+                print(RED + self.status + ": " + COLOR_STOP + ddr_results['Question'][0]['name'].rstrip('.'))
             else:
-                self.status = 'Not Blocked'
-                print('Not Blocked')
+                self.status = 'Allowed'
+                print(GREEN + self.status + ": " + COLOR_STOP + ddr_results['Question'][0]['name'].rstrip('.'))
             # print(self.status)
         else:
             self.status = "NXDOMAIN"
