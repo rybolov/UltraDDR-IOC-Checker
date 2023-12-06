@@ -15,14 +15,12 @@ Most CTI sources (example: CISA Advisories) "defang" CTI IOC by replacing "." wi
 An example file with the "canary FQDNs" for each of the UltraDDR categories is in testdata/categories.txt.
 An example file with errors is in testdata/testfile.txt.
 
-
 We give the status of each IOC:
 1. Blocked: Blocked by UltraDDR.
-2. Not Blocked: Not blocked by UltraDDR.
+2. Allowed: Permitted by UltraDDR.
 3. NXDOMAIN: The domain no longer exists or the FQDN inside of it does not exist.
 4. PTR: For IP addresses, we query for PTR but UltraDDR doesn't block like it does for the other IOCs.
 5. Error: Anything not in the above list.
-
 
 ### To Use:
 1. `git clone`
@@ -31,7 +29,7 @@ We give the status of each IOC:
 4. `source ./venv/bin/activate`
 5. `pip3 install -r requirements.txt`
 6. `cp config.py.example config.py`
-7. `vi config.py`
+7. `vi config.py` See *To Configure* below.
 6. `python3 ./ultraddr-ioc-checker.py --strict -i testfile.txt`
 7. Optional: `./do.bulk.sh` to update findings for ./data/*.txt.
 
@@ -54,6 +52,7 @@ python3 ./ultraddr-ioc-checker.py --help
 
 usage: ultraddr-ioc-checker.py [-h] [-i FILE] [--strict] [--serial]
                                [--addpause] [-t THREADS] [--random RANDOM]
+                               [--device DEVICE] [--once] [--verbose]
 
 Send queries for CTI IOC to UltraDDR.
 
@@ -74,7 +73,9 @@ options:
   --device DEVICE, -d DEVICE
                         Send this name as the DeviceID. Default is 'DDR-IOC-
                         Checker' and can be configured in config.py
-
+  --once                Only run the IOC list once. This is good for quickly testing
+                        IOCs against categories, block/allow lists, and policy rules.
+  --verbose             Display more detail on processing of IOC list.
 ```
 
 ### To Configure:

@@ -1,3 +1,5 @@
 config.py
 __pycache__/
 testdata/*.csv
+*.csv
+venv/
