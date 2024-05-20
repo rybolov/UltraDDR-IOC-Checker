@@ -126,7 +126,7 @@ class IOCList:
                 elif re.search('^([0-9a-fA-F]{0,8}:){7}[0-9a-fA-F]{0,8}$', line):  # IPv6 address is allowed
                     print('Line is valid IPv6: ', line)
                     self.IOCnames[line] = IOCName(line)
-                elif re.search('^[a-z0-9\-\.]*$', line):  # Domain/FQDN allowable characters is allowed
+                elif re.search('^[a-z0-9\-\.\_]*$', line):  # Domain/FQDN allowable characters is allowed
                     print('Line is valid FQDN/domain: ', line)
                     self.IOCnames[line] = IOCName(line)
                 elif re.search('^.+@[a-z0-9\-\.]*$', line): # Email address is allowed
